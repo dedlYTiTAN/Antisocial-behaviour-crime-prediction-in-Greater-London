@@ -1,12 +1,12 @@
 # Antisocial-behaviour-crime-prediction-in-Greater-London
 
-This project explores and models **antisocial behaviour (ASB) crime** in Greater London using open crime data and machine learning, with the goal of identifying patterns and predicting future ASB incidents at a local area level. [web:21][web:26]
+This project explores and models **antisocial behaviour (ASB) crime** in Greater London using open crime data and machine learning, with the goal of identifying patterns and predicting future ASB incidents at a local area level. 
 
 ## 🎯 Objectives
 
-- Analyse spatial and temporal patterns of antisocial behaviour crime in Greater London. [web:21]  
-- Engineer features from historical crime records and contextual data (e.g. area, time, category). [web:24]  
-- Train and evaluate predictive models to estimate future ASB counts or risk by area. [web:24]  
+- Analyse spatial and temporal patterns of antisocial behaviour crime in Greater London. 
+- Engineer features from historical crime records and contextual data (e.g. area, time, category).
+- Train and evaluate predictive models to estimate future ASB counts or risk by area. 
 
 ## 📂 Project Structure
 
@@ -21,9 +21,9 @@ Example structure (update to match your repo):
 
 ## 🧮 Data
 
-- Source: UK police / open crime data for Greater London, filtered to the **anti-social behaviour** category. [web:21][web:26]  
-- Typical fields: date, longitude/latitude or LSOA, crime type, context. [web:26]  
-- Aggregation: records grouped by spatial unit (e.g. borough, ward, LSOA, or grid cell) and time period (e.g. month). [web:24]  
+- Source: UK police / open crime data for Greater London, filtered to the **anti-social behaviour** category. 
+- Typical fields: date, longitude/latitude or LSOA, crime type, context.
+- Aggregation: records grouped by spatial unit (e.g. borough, ward, LSOA, or grid cell) and time period (e.g. month). 
 
 > Note: Due to licensing and size, raw data files may be excluded from the repository. Instructions for downloading are provided in the notebooks or scripts.
 
@@ -32,6 +32,6 @@ Example structure (update to match your repo):
 - Python (>= 3.9)
 - Data: pandas, NumPy
 - Visualisation: matplotlib / seaborn / plotly
-- Machine Learning: scikit-learn (and/or XGBoost, LightGBM, etc.) [web:24]  
-- Geospatial (optional): GeoPandas, shapely
+- Machine Learning: scikit-learn (and/or XGBoost, LightGBM, etc.) 
+- Geospatial (optional): GeoPandas, shapelyb:
 
