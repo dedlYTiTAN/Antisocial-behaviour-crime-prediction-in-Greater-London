@@ -1,37 +1,34 @@
-# Antisocial-behaviour-crime-prediction-in-Greater-London
+# Antisocial Behaviour Crime Prediction in Greater London
+This project implements a spatio-temporal modelling pipeline to analyse and predict anti-social behaviour (ASB) crime patterns across Greater London using machine learning and deep learning on large-scale crime and geospatial data.
+​
 
-This project explores and models **antisocial behaviour (ASB) crime** in Greater London using open crime data and machine learning, with the goal of identifying patterns and predicting future ASB incidents at a local area level. 
+# Project Overview
+Title in notebook: “Spatio-Temporal Prediction of Anti-Social Behaviour in London using Machine Learning and DEEP LEARNING”.
+Uses a combined street-level crime dataset for London (Metropolitan Police, City of London, British Transport Police) from 2022–2024, with over 3.1 million records.
+Focuses on aggregating ASB crimes on a regular spatial grid over time and learning how crime levels evolve monthly in each grid cell.
+​
 
-## 🎯 Objectives
+# Data and Preprocessing
+Loads a combined CSV file (e.g. combined_data.csv) containing crime records for multiple forces and years.
+Uses Google Colab to mount cloud storage and read the large dataset efficiently.
+Unzips and loads UK boundary shapefiles and Greater London shapefiles (including OSM buildings, land use, natural features, places, POIs) for spatial processing.
+Constructs a grid over London and aggregates crime counts, past (lag) crime counts, and points-of-interest (POI) counts per grid cell and month.
+​
 
-- Analyse spatial and temporal patterns of antisocial behaviour crime in Greater London. 
-- Engineer features from historical crime records and contextual data (e.g. area, time, category).
-- Train and evaluate predictive models to estimate future ASB counts or risk by area. 
+# Features and Target
+**Spatial index:** grid_id identifies each grid cell in Greater London.​
+**Temporal features:** monthly crime counts from May 2022 to December 2024 are stored as separate columns (e.g. 2022-05, 2022-06, …, 2024-12).​
+**Additional features:** poi_counts, historical crime_counts_lag, and the cell’s geometry (polygon) are included in the final dataset.
+**Target variable:** crime_counts represents ASB crime counts to be predicted for each grid cell and time step.
+​
 
-## 📂 Project Structure
+# Modelling and Evaluation
+Builds spatio-temporal models that combine historical counts and contextual features to predict future ASB crime levels per grid cell.
+Includes a spatial lag model component (e.g. slm_pred) capturing the influence of neighbouring cells, and corresponding residuals (resid_slm).
+Produces a final modelling table with 1,736 rows and 39 columns, including all temporal features, crime counts, spatial geometry, lag features, predictions and residuals.
+​
 
-Example structure (update to match your repo):
+**Notebook**
+**Main notebook**: Crime-Prediction-In-Greater-London-1.ipynb.​
 
-- `data/` – Raw and processed crime datasets (not tracked in Git, or with sample data only).
-- `notebooks/` – Exploratory data analysis (EDA) and modelling notebooks.
-- `scripts/` – Python scripts for data cleaning, feature engineering, and training.
-- `models/` – Saved model artefacts (if applicable).
-- `reports/` – Generated plots and summary reports.
-- `README.md` – Project documentation (this file).
-
-## 🧮 Data
-
-- Source: UK police / open crime data for Greater London, filtered to the **anti-social behaviour** category. 
-- Typical fields: date, longitude/latitude or LSOA, crime type, context.
-- Aggregation: records grouped by spatial unit (e.g. borough, ward, LSOA, or grid cell) and time period (e.g. month). 
-
-> Note: Due to licensing and size, raw data files may be excluded from the repository. Instructions for downloading are provided in the notebooks or scripts.
-
-## 🛠 Tech Stack
-
-- Python (>= 3.9)
-- Data: pandas, NumPy
-- Visualisation: matplotlib / seaborn / plotly
-- Machine Learning: scikit-learn (and/or XGBoost, LightGBM, etc.) 
-- Geospatial (optional): GeoPandas, shapelyb:
-
+Organised into sections such as dataset loading, spatial data preparation, feature engineering, model training, and diagnostics/visualisation.
