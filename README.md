@@ -1,74 +1,74 @@
-# De-identifying Clinical Text with spaCy NER
+# Spatio-Temporal Prediction of Anti-Social Behaviour in Greater London
 
-A proof-of-concept entity recogniser that masks identifier-like entities in clinical-style text, built for an MSc dissertation (University of Hull, December 2024). It compares a spaCy NER model with a DistilBERT token classifier and wraps the spaCy model in a small Gradio app.
+Predicting where anti-social behaviour (ASB) will be concentrated next month, on a 1 km grid across Greater London, using police-recorded crime data, OpenStreetMap points of interest, and spatial and temporal lag features. Two models are compared: gradient-boosted trees (XGBoost) and a causal 1D convolutional neural network.
 
-> **Status: proof of concept on synthetic data.** The model is trained and validated on sentences generated from a fixed template, so its near-perfect validation scores do not show that it can de-identify real clinical notes. It is not a de-identification tool and must not be used on real patient data. See [Limitations](#limitations).
+> **Status: research notebook.** Results are from a single held-out month and have not yet been compared against simple baselines such as "same as last month". See [Limitations](#limitations) before drawing conclusions.
 
-## What is in this repository
+## Data
 
-| File | Contents |
+The data is not included in this repository.
+
+| Source | Use |
 |---|---|
-| `Coding.ipynb` | The full pipeline: data preparation, spaCy training and evaluation, Gradio app, DistilBERT comparison |
-| `Dissertation report.pdf` | The MSc dissertation |
-| `Presentation.pptx` | Project presentation slides |
+| Street-level crime data from [data.police.uk](https://data.police.uk) for the Metropolitan Police, City of London Police and British Transport Police, 2022 to 2024, combined into `combined_data.csv` | Crime records: 3,114,670 after removing rows with missing coordinates, of which 625,032 are anti-social behaviour |
+| OpenStreetMap shapefile layers for Greater London (points of interest file `gis_osm_pois_free_1.shp`) | Points-of-interest counts per grid cell |
+| UK and Greater London boundary shapefiles | Defining the London boundary and the grid |
 
-## How it works
+Contains public sector information licensed under the Open Government Licence v3.0. Map data © OpenStreetMap contributors (ODbL).
 
-1. **Synthetic data.** A synthetic table of patient records (patient ID, age, gender, medical condition, treatment, outcome, insurance type, region, smoking status, admission type, hospital ID, and so on).
-2. **Templated text.** Each row is turned into a sentence with a fixed template, for example: *"Patient {id} with {condition} was admitted to {hospital} in {region}…"*. A light synonym-swap augmentation is also defined.
-3. **Programmatic annotation.** Entity spans are created by locating each field value inside the sentence it came from. There are 10 labels: `PATIENT_ID`, `HOSPITAL_ID`, `REGION`, `ADMISSION_TYPE`, `INSURANCE_TYPE`, `SMOKING_STATUS`, `GENDER`, `MEDICAL_CONDITION`, `TREATMENT`, `OUTCOME`. Annotation is automatic, not manual.
-4. **spaCy NER.** A blank English pipeline with an NER component, trained for 10 epochs (dropout 0.2, compounding batch sizes) on an 80/20 train/validation split.
-5. **Evaluation.** Per-entity precision, recall and F1, confusion matrix and ROC curves on the validation split.
-6. **Gradio app.** A local text box that replaces detected entities with their labels.
-7. **DistilBERT comparison.** A `DistilBertForTokenClassification` model trained for 3 epochs, then compared with spaCy on a few hand-written sentences.
+## Method
 
-## Results
+1. **Clean and filter.** Drop records with missing coordinates, then keep `Anti-social behaviour` records.
+2. **Grid.** Build a 1 km grid over Greater London and assign each record to a cell with a spatial join.
+3. **Monthly counts.** Count ASB incidents per cell per month, May 2022 to December 2024, giving 1,736 cells with a monthly series each.
+4. **Points of interest.** Count OpenStreetMap points of interest per cell.
+5. **Spatial statistics.** Moran's I for spatial autocorrelation, a spatial lag model (`spreg`), and Gi* hotspot and coldspot maps.
+6. **Features.**
+   - `crime_counts_tlag1`: the cell's count in the previous month.
+   - `crime_counts_lag`: the average count of neighbouring cells (Queen contiguity) in the same month.
+   - `poi_counts`: points of interest in the cell.
+7. **Models and split.** Trained on 2023, tested on January 2024 (1,736 test cells).
+   - **XGBoost:** 600 trees, depth 4, learning rate 0.05, subsample and column sample 0.9, L2 regularisation 1.0.
+   - **Causal 1D-CNN:** six-month windows per cell; three causal convolution layers (64, 64, 32 filters), dropout 0.2, global average pooling, dense layers (64, 16, 1); Adam (1e-3), up to 250 epochs, batch size 256, 10% of the training data held out for checkpoint selection. Features are scaled using training data only.
 
-**Validation split (same template as training).** Per-entity precision, recall and F1 are reported as 1.00 for all ten labels in the main evaluation (one later evaluation cell shows 0.88 for `TREATMENT`). Training loss falls from about 3,110 in epoch 1 to about 0.000005 by epoch 10, which indicates the model has learned the template rather than a general task. Treat these scores as a sanity check only.
+## Results (January 2024, 1,736 grid cells)
 
-**Out-of-template test (3 hand-written sentences, 10 labelled entities).** For example: *"Patient John Doe with hypertension was admitted to hospital_1234."*
+| Model | RMSE | MAE | R² |
+|---|---|---|---|
+| XGBoost | 5.396 | 3.180 | 0.853 |
+| 1D-CNN | 5.215 | 3.060 | 0.863 |
 
-| Model | Accuracy | Notes |
-|---|---|---|
-| spaCy NER | 0.10 | `MEDICAL_CONDITION` F1 0.50 (precision 1.00, recall 0.33); `PATIENT_ID`, `HOSPITAL_ID`, `REGION` and `SMOKING_STATUS` all 0.00 |
-| DistilBERT | 0.00 | Not a like-for-like comparison, see below |
-
-This is the more informative result: the model does not generalise beyond its training template. The test set is only three sentences, so the exact figures are indicative, not precise.
-
-The dissertation abstract quotes an F1 of 0.94. The outputs saved in `Coding.ipynb` show the validation and out-of-template scores above, so treat the notebook outputs as the reference.
+Figures are the values printed by the evaluation cells (RMSE and MAE are in incidents per cell per month). The notebook also includes predicted-versus-actual scatter plots and maps of the predictions.
 
 ## Limitations
 
-- **Synthetic, templated data.** Every training sentence follows the same structure, so validation data shares that structure.
-- **The labels are not a PHI standard.** Several labels (medical condition, treatment, outcome, insurance type, smoking status) are clinical attributes, not identifiers. Real identifier types such as names, dates, phone numbers and addresses are not covered.
-- **The DistilBERT comparison is not valid.** Its labels come from a placeholder rule that marks numeric tokens as `B-SENSITIVE` (the notebook comment says "for this demo"), so it is not trained on the same task as the spaCy model. No conclusion about spaCy versus DistilBERT should be drawn from it.
-- **Tiny out-of-template test.** Three sentences cannot support a reliable estimate.
-- **The dataset file is not included**, so the notebook cannot be run as-is from this repository.
+- **No baseline yet.** The models have not been compared with simple forecasts such as last month's count, a moving average, or the same month last year. Since last month's count is already an input, such a baseline may score close to the figures above. Without it the models' added value is unknown.
+- **XGBoost uses information from the month it predicts.** Its `crime_counts_lag` feature is the neighbouring cells' count in the same month as the target, which would not be known in a real forecast. The CNN uses only earlier months, so the two models are not compared on equal information.
+- **One test month.** January 2024 alone says little about stability or seasonality, and the 1,736 cells are spatially correlated, so they are not independent observations.
+- **Count data.** ASB counts are skewed and overdispersed, and squared-error metrics are dominated by a few busy central cells. A count-appropriate loss (Poisson or Tweedie) and scaled errors would be more informative.
+- **No demographic or deprivation covariates.** Features are limited to past counts, neighbour counts and points of interest.
+- **What the data measures.** Recorded ASB reflects reporting and policing patterns, not only underlying behaviour. This is a modelling exercise, not an operational tool. Predictive-policing systems can reinforce existing bias through feedback loops, and any real use would need careful ethical review.
+- **Not reproducible as-is.** The notebook mounts Google Drive in Google Colab and expects the data files at Colab paths.
 
 ## Suggested next steps
 
-1. Generate realistic identifiers (names, dates, phone numbers, addresses, record numbers) with a library such as Faker, and use many varied note templates.
-2. Hold out whole templates for testing, so the test measures generalisation instead of memorisation.
-3. Compare against baselines: regular expressions, a pretrained general-purpose NER model, and pretrained clinical de-identification models.
-4. Report entity-level metrics with recall first, since a missed identifier is the costly error.
-5. Evaluate on realistic clinical text (for example, public sample notes with inserted surrogate identifiers).
+1. Add baselines: last month, three-month average, same month last year.
+2. Replace the same-month spatial lag with the neighbours' lag at month t-1 so XGBoost and the CNN see the same information.
+3. Evaluate on several rolling test months and report the mean and spread.
+4. Compute the comparison chart from the model predictions instead of typed-in values.
+5. Try Poisson or Tweedie objectives, and add deprivation and population covariates.
 
 ## Running the notebook
 
-The notebook was developed with Python 3.12.
+The notebook is `Crime Prediction In Greater London.ipynb`. It was developed in Google Colab.
 
 ```bash
-pip install spacy scikit-learn pandas numpy matplotlib seaborn gradio transformers torch
-jupyter notebook Coding.ipynb
+pip install geopandas shapely libpysal esda spreg contextily scikit-learn xgboost tensorflow pandas numpy matplotlib
 ```
 
-It expects a file named `medical_data.csv` in the same folder. The file is not included. It should be a synthetic patient-records table with columns such as `Patient_ID`, `Age`, `Gender`, `Medical_Condition`, `Treatment`, `Outcome`, `Insurance_Type`, `Income`, `Region`, `Smoking_Status`, `Admission_Type`, `Hospital_ID` and `Length_of_Stay`.
-
-<!-- TODO: add the dataset source or link here so the notebook can be reproduced. -->
-
-## Disclaimer
-
-The data is synthetic and used for learning and experimentation only. This project is not a production de-identification system and should not be applied to real patient data without rigorous privacy, legal and ethical review.
+1. Download the street-level crime CSVs for the three forces from data.police.uk and combine them into `combined_data.csv`.
+2. Download the OpenStreetMap shapefile layers for Greater London and the UK and London boundary shapefiles.
+3. Update the file paths in the first cells (they point to Google Drive), then run the notebook top to bottom.
 
 ## Author
 
